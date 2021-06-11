@@ -58,6 +58,13 @@ public protocol TableViewReorderDelegate: class {
     func tableView(_ tableView: UITableView, canReorderRowAt indexPath: IndexPath) -> Bool
     
     /**
+     Asks the reorder delegate whether a given row can be moved.
+     - Parameter tableView: The table view requesting this information.
+     - Parameter indexPath: The index path of a row.
+     */
+    func tableView(_ tableView: UITableView, canReorderTargetRowAt indexPath: IndexPath) -> Bool
+    
+    /**
      When attempting to move a row from a sourceIndexPath to a proposedDestinationIndexPath, asks the reorder delegate what the actual targetIndexPath should be. This allows the reorder delegate to selectively allow or modify reordering between sections or groups of rows, for example.
      - Parameter tableView: The table view requesting this information.
      - Parameter sourceIndexPath: The original index path of the row to be moved.
@@ -83,6 +90,10 @@ public protocol TableViewReorderDelegate: class {
 }
 
 public extension TableViewReorderDelegate {
+    
+    func tableView(_ tableView: UITableView, canReorderTargetRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
     
     func tableView(_ tableView: UITableView, canReorderRowAt indexPath: IndexPath) -> Bool {
         return true
@@ -257,6 +268,17 @@ public class ReorderController: NSObject {
     
     func updateReorder(touchPosition: CGPoint) {
         guard case .reordering(let context) = reorderState else { return }
+
+        guard let delegate = delegate,
+              let tableView = tableView,
+              let superview = tableView.superview
+        else { return }
+
+        let tableTouchPosition = superview.convert(touchPosition, to: tableView)
+        
+        guard let sourceRow = tableView.indexPathForRow(at: tableTouchPosition),
+            delegate.tableView(tableView, canReorderTargetRowAt: sourceRow)
+        else { return }
         
         var newContext = context
         newContext.touchPosition = touchPosition
@@ -267,9 +289,13 @@ public class ReorderController: NSObject {
     }
     
     func endReorder() {
-        guard case .reordering(let context) = reorderState,
+        guard let delegate = delegate,
+              case .reordering(let context) = reorderState,
             let tableView = tableView,
             let superview = tableView.superview
+        else { return }
+        
+        guard delegate.tableView(tableView, canReorderTargetRowAt: context.destinationRow)
         else { return }
         
         reorderState = .ready(snapshotRow: context.destinationRow)
@@ -301,7 +327,7 @@ public class ReorderController: NSObject {
         animateSnapshotViewOut()
         clearAutoScrollDisplayLink()
         
-        delegate?.tableViewDidFinishReordering(tableView, from: context.sourceRow, to: context.destinationRow)
+        delegate.tableViewDidFinishReordering(tableView, from: context.sourceRow, to: context.destinationRow)
     }
     
     // MARK: - Spacer cell

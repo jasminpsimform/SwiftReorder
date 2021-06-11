@@ -39,9 +39,9 @@ extension ReorderController {
         
         let safeAreaFrame: CGRect
         if #available(iOS 11, *) {
-            safeAreaFrame = tableView.frame.inset(by: tableView.adjustedContentInset)
+            safeAreaFrame = UIEdgeInsetsInsetRect(tableView.frame, tableView.adjustedContentInset)
         } else {
-            safeAreaFrame = tableView.frame.inset(by: tableView.scrollIndicatorInsets)
+            safeAreaFrame = UIEdgeInsetsInsetRect(tableView.frame, tableView.scrollIndicatorInsets)
         }
         
         let distanceToTop = max(snapshotView.frame.minY - safeAreaFrame.minY, 0)
@@ -58,7 +58,7 @@ extension ReorderController {
 
     func activateAutoScrollDisplayLink() {
         autoScrollDisplayLink = CADisplayLink(target: self, selector: #selector(handleDisplayLinkUpdate))
-        autoScrollDisplayLink?.add(to: .main, forMode: .default)
+        autoScrollDisplayLink?.add(to: .main, forMode: RunLoopMode.defaultRunLoopMode)
         lastAutoScrollTimeStamp = nil
     }
 
